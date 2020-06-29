@@ -13,7 +13,7 @@
 DvG_PID_Controller
 ==================
 PID controller with integral-windup & derivative-kick prevention and bumpless
-auto-to-manual-mode transfer.
+manual-to-auto-mode transfer.
 
 Original C++ code by::
 

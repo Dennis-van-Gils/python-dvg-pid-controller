@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """PID controller with integral-windup & derivative-kick prevention and bumpless
-auto-to-manual-mode transfer
+manual-to-auto-mode transfer
 
 Original C++ code by::
 
@@ -34,7 +34,7 @@ __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
 __date__ = "29-06-2020"
-__version__ = "1.0"
+__version__ = "1.0.1"
 
 import time
 import numpy as np
