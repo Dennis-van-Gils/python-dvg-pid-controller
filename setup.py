@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 
 setup(
     name="dvg-pid-controller",
-    version="1.0.1",
+    version="2.0.0",
     license="MIT",
     description="PID controller with integral-windup & derivative-kick prevention and bumpless manual-to-auto-mode transfer.",
     long_description="%s\n%s"
@@ -72,8 +72,8 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "numpy>=1.15",
-        "dvg-debug-functions>=1.1.2",
+        "numpy~=1.15",
+        "dvg-debug-functions~=2.0",
     ],
     extras_require={},
 )

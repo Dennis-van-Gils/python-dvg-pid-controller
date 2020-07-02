@@ -33,12 +33,12 @@ obtained time step between individual 'computes'.
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
-__date__ = "29-06-2020"
-__version__ = "1.0.1"
+__date__ = "02-07-2020"
+__version__ = "2.0.0"
 
 import time
 import numpy as np
-from DvG_debug_functions import dprint
+from dvg_debug_functions import dprint
 
 # Show debug info in terminal?
 DEBUG = False
