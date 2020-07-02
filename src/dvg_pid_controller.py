@@ -11,11 +11,11 @@ Original C++ code by::
  *
  * This Library is licensed under the MIT License
  ******************************************************************************/
- 
+
 More information:
     * http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
     * http://playground.arduino.cc/Code/PIDLibrary
- 
+
 Ported to Python by Dennis van Gils
 
 Modifications:
@@ -40,9 +40,6 @@ import time
 import numpy as np
 from dvg_debug_functions import dprint
 
-# Show debug info in terminal?
-DEBUG = False
-
 
 class Constants:
     MANUAL = 0
@@ -53,7 +50,7 @@ class Constants:
 
 
 class PID_Controller:
-    def __init__(self, Kp, Ki, Kd, controller_direction=Constants.DIRECT):
+    def __init__(self, Kp, Ki, Kd, controller_direction=Constants.DIRECT, debug=False):
         self.setpoint = np.nan
         self.output = np.nan
 
@@ -61,6 +58,9 @@ class PID_Controller:
         self.kp = np.nan
         self.ki = np.nan
         self.kd = np.nan
+
+        # Show debug info in terminal?
+        self.debug = debug
 
         # Must be set by set_output_limits()
         self.output_limit_min = np.nan
@@ -102,16 +102,14 @@ class PID_Controller:
         # self.iTerm = self.iTerm + (self.ki * error)
         self.iTerm = self.iTerm + (self.ki * time_step * error)
 
-        if DEBUG:
+        if self.debug:
             if self.iTerm < self.output_limit_min:
                 dprint("iTerm < output_limit_min: integral windup")
             elif self.iTerm > self.output_limit_max:
                 dprint("iTerm > output_limit_max: integral windup")
 
         # Prevent integral windup
-        self.iTerm = np.clip(
-            self.iTerm, self.output_limit_min, self.output_limit_max
-        )
+        self.iTerm = np.clip(self.iTerm, self.output_limit_min, self.output_limit_max)
 
         # Derivative term
         # Prevent derivative kick: really good to do!
@@ -121,7 +119,7 @@ class PID_Controller:
         # Compute PID Output
         self.output = self.pTerm + self.iTerm + self.dTerm
 
-        if DEBUG:
+        if self.debug:
             dprint("%i" % (time_step * 1000))
             dprint("%.1f %.1f %.1f" % (self.pTerm, self.iTerm, self.dTerm))
             dprint((" " * 14 + "%.2f") % self.output)
@@ -132,9 +130,7 @@ class PID_Controller:
                 dprint("output > output_limit_max: output clamped")
 
         # Clamp the output to its limits
-        self.output = np.clip(
-            self.output, self.output_limit_min, self.output_limit_max
-        )
+        self.output = np.clip(self.output, self.output_limit_min, self.output_limit_max)
 
         # Remember some variables for next time
         self.last_input = _input
@@ -199,13 +195,11 @@ class PID_Controller:
         self.iTerm = current_output
         self.last_input = current_input
 
-        if DEBUG:
+        if self.debug:
             dprint("PID init")
             if self.iTerm < self.output_limit_min:
                 dprint("@PID init: iTerm < output_limit_min: integral windup")
             elif self.iTerm > self.output_limit_max:
                 dprint("@PID init: iTerm > output_limit_max: integral windup")
 
-        self.iTerm = np.clip(
-            self.iTerm, self.output_limit_min, self.output_limit_max
-        )
+        self.iTerm = np.clip(self.iTerm, self.output_limit_min, self.output_limit_max)
