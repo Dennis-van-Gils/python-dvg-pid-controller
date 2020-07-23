@@ -15,9 +15,9 @@ DvG_PID_Controller
 *PID controller with integral-windup & derivative-kick prevention and bumpless
 manual-to-auto-mode transfer.*
 
-Installation:
+Installation::
 
-    ``pip install dvg-devices``
+    pip install dvg-devices
 
 Based on C++ code by:
 
