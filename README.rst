@@ -13,11 +13,11 @@
 DvG_PID_Controller
 ==================
 *PID controller with integral-windup & derivative-kick prevention and bumpless
-manual-to-auto-mode transfer.*
+manual-to-auto-mode transfer, forked from python-dvg-pid-controller.*
 
 Installation::
 
-    pip install dvg-devices
+    pip install tec-v-pid-controller
 
 Based on C++ code by:
 
@@ -33,6 +33,7 @@ Based on C++ code by:
     More information:
         * http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
         * http://playground.arduino.cc/Code/PIDLibrary
+        * https://github.com/Dennis-van-Gils/python-dvg-pid-controller
  
     Ported to Python by Dennis van Gils.
 
@@ -41,3 +42,6 @@ Modifications:
     * Code refactoring.
     * P_ON_M mode has been removed.
     * Made the proportional, integrative and derivative terms accessible.
+    * Made error accessible
+    * Removed possible return of nan
+    * Adding extra input, so that controller can also be used as differential controller. Keep extra input to None for normal use.
