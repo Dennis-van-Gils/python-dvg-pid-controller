@@ -22,7 +22,7 @@ Installation::
 Based on C++ code by:
 
     ::
- 
+
         /******************************************************************************
         * Arduino PID Library - Version 1.2.1
         * by Brett Beauregard <br3ttb@gmail.com> brettbeauregard.com
@@ -33,7 +33,7 @@ Based on C++ code by:
     More information:
         * http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
         * http://playground.arduino.cc/Code/PIDLibrary
- 
+
     Ported to Python by Dennis van Gils.
 
 Modifications:
@@ -41,3 +41,4 @@ Modifications:
     * Code refactoring.
     * P_ON_M mode has been removed.
     * Made the proportional, integrative and derivative terms accessible.
+    * Made the last error accessible.

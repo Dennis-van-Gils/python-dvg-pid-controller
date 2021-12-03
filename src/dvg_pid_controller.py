@@ -22,6 +22,7 @@ Modifications:
     * Code refactoring.
     * P_ON_M mode has been removed.
     * Made the proportional, integrative and derivative terms accessible.
+    * Made the last error accessible.
 
 The 'compute' method should be called repeatedly at a fixed rate. Contrary to
 the C library, the method here doesn't check the timing and just computes a
@@ -33,8 +34,8 @@ obtained time step between individual 'computes'.
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
-__date__ = "02-07-2020"
-__version__ = "2.0.0"
+__date__ = "03-12-2021"
+__version__ = "2.0.1"
 
 import time
 import numpy as np
@@ -50,7 +51,9 @@ class Constants:
 
 
 class PID_Controller:
-    def __init__(self, Kp, Ki, Kd, controller_direction=Constants.DIRECT, debug=False):
+    def __init__(
+        self, Kp, Ki, Kd, controller_direction=Constants.DIRECT, debug=False
+    ):
         self.setpoint = np.nan
         self.output = np.nan
 
@@ -77,6 +80,7 @@ class PID_Controller:
 
         self.last_time = time.perf_counter()
         self.last_input = np.nan
+        self.last_error = np.nan
 
     def compute(self, current_input):
         """Compute new PID output. This function should be called repeatedly,
@@ -93,14 +97,14 @@ class PID_Controller:
             return False
 
         _input = current_input
-        error = self.setpoint - _input
+        self.last_error = self.setpoint - _input
 
         # Proportional term
-        self.pTerm = self.kp * error
+        self.pTerm = self.kp * self.last_error
 
         # Integral term
-        # self.iTerm = self.iTerm + (self.ki * error)
-        self.iTerm = self.iTerm + (self.ki * time_step * error)
+        # self.iTerm = self.iTerm + (self.ki * self.last_error)
+        self.iTerm = self.iTerm + (self.ki * time_step * self.last_error)
 
         if self.debug:
             if self.iTerm < self.output_limit_min:
@@ -109,7 +113,9 @@ class PID_Controller:
                 dprint("iTerm > output_limit_max: integral windup")
 
         # Prevent integral windup
-        self.iTerm = np.clip(self.iTerm, self.output_limit_min, self.output_limit_max)
+        self.iTerm = np.clip(
+            self.iTerm, self.output_limit_min, self.output_limit_max
+        )
 
         # Derivative term
         # Prevent derivative kick: really good to do!
@@ -130,7 +136,9 @@ class PID_Controller:
                 dprint("output > output_limit_max: output clamped")
 
         # Clamp the output to its limits
-        self.output = np.clip(self.output, self.output_limit_min, self.output_limit_max)
+        self.output = np.clip(
+            self.output, self.output_limit_min, self.output_limit_max
+        )
 
         # Remember some variables for next time
         self.last_input = _input
@@ -202,4 +210,6 @@ class PID_Controller:
             elif self.iTerm > self.output_limit_max:
                 dprint("@PID init: iTerm > output_limit_max: integral windup")
 
-        self.iTerm = np.clip(self.iTerm, self.output_limit_min, self.output_limit_max)
+        self.iTerm = np.clip(
+            self.iTerm, self.output_limit_min, self.output_limit_max
+        )
