@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+4#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """PID controller with integral-windup & derivative-kick prevention and bumpless
 manual-to-auto-mode transfer
@@ -45,26 +45,27 @@ class Constants:
     MANUAL = 0
     AUTOMATIC = 1
 
-    DIRECT = 0
-    REVERSE = 1
+    DIRECT = 1
+    REVERSE = -1
 
 
 class PID_Controller:
     def __init__(self, Kp, Ki, Kd, controller_direction=Constants.DIRECT, debug=False):
-        self.setpoint = np.nan
-        self.output = np.nan
+        self.setpoint = None
+        self.output = None
 
         # Must be set by set_tunings()
-        self.kp = np.nan
-        self.ki = np.nan
-        self.kd = np.nan
+        self.kp = None
+        self.ki = None
+        self.kd = None
+        self.direction = 1
 
         # Show debug info in terminal?
         self.debug = debug
 
         # Must be set by set_output_limits()
-        self.output_limit_min = np.nan
-        self.output_limit_max = np.nan
+        self.output_limit_min = None
+        self.output_limit_max = None
 
         self.in_auto = False
 
@@ -76,31 +77,36 @@ class PID_Controller:
         self.set_output_limits(0, 100)
 
         self.last_time = time.perf_counter()
-        self.last_input = np.nan
+        self.last_input = None
 
-    def compute(self, current_input):
+    def compute(self, current_input, differential_input=None ):
         """Compute new PID output. This function should be called repeatedly,
         preferably at a fixed time interval.
         Returns True when the output is computed, false when nothing has been
         done.
+        If the differential_input is supplied, it will use diff_input - current_input
+        as input value.
         """
 
         now = time.perf_counter()  # [s]
         time_step = now - self.last_time
 
-        if (not self.in_auto) or np.isnan(self.setpoint):
+        if (not self.in_auto) or (not self.setpoint):
             self.last_time = now
             return False
 
-        _input = current_input
-        error = self.setpoint - _input
+        if differential_input:
+            self.input = differential_input - current_input
+        else:
+            self.input = current_input
+        self.error = self.setpoint - self.input
 
         # Proportional term
-        self.pTerm = self.kp * error
+        self.pTerm = self.direction * self.kp * self.error
 
         # Integral term
         # self.iTerm = self.iTerm + (self.ki * error)
-        self.iTerm = self.iTerm + (self.ki * time_step * error)
+        self.iTerm = self.iTerm + (self.direction * self.ki * time_step * self.error)
 
         if self.debug:
             if self.iTerm < self.output_limit_min:
@@ -114,7 +120,7 @@ class PID_Controller:
         # Derivative term
         # Prevent derivative kick: really good to do!
         # self.dTerm = -self.kd * (_input - self.last_input)
-        self.dTerm = -self.kd / time_step * (_input - self.last_input)
+        self.dTerm = -(self.direction * self.kd) / time_step * (self.input - self.last_input)
 
         # Compute PID Output
         self.output = self.pTerm + self.iTerm + self.dTerm
@@ -133,7 +139,7 @@ class PID_Controller:
         self.output = np.clip(self.output, self.output_limit_min, self.output_limit_max)
 
         # Remember some variables for next time
-        self.last_input = _input
+        self.last_input = self.input
         self.last_time = now
 
         return True
@@ -153,16 +159,11 @@ class PID_Controller:
         if (Kp < 0) or (Ki < 0) or (Kd < 0):
             return
 
-        self.controller_direction = direction
+        self.kp = Kp
+        self.ki = Ki
+        self.kd = Kd
+        self.direction = direction
 
-        if self.controller_direction == Constants.REVERSE:
-            self.kp = -Kp
-            self.ki = -Ki
-            self.kd = -Kd
-        else:
-            self.kp = Kp
-            self.ki = Ki
-            self.kd = Kd
 
     def set_output_limits(self, limit_min, limit_max):
         if limit_min >= limit_max:
