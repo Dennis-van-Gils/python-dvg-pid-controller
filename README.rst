@@ -17,7 +17,7 @@ manual-to-auto-mode transfer.*
 
 Installation::
 
-    pip install dvg-devices
+    pip install dvg-pid-controller
 
 Based on C++ code by:
 
