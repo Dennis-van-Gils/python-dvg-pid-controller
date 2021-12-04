@@ -40,7 +40,7 @@ __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
 __date__ = "04-12-2021"
-__version__ = "2.0.2"
+__version__ = "2.1.0"
 
 import time
 import numpy as np
