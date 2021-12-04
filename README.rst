@@ -42,3 +42,8 @@ Modifications:
     * P_ON_M mode has been removed.
     * Made the proportional, integrative and derivative terms accessible.
     * Made the last error accessible.
+    * Added optional argument `differential_input` to have the PID controller
+      regulate a specific difference with respect to the main argument
+      `current_input`. The specific difference that will be regulated is set by
+      `setpoint`.
+      Contributor: https://github.com/antonverburg.

@@ -23,6 +23,11 @@ Modifications:
     * P_ON_M mode has been removed.
     * Made the proportional, integrative and derivative terms accessible.
     * Made the last error accessible.
+    * Added optional argument `differential_input` to have the PID controller
+      regulate a specific difference with respect to the main argument
+      `current_input`. The specific difference that will be regulated is set by
+      `setpoint`.
+      Contributor: https://github.com/antonverburg.
 
 The 'compute' method should be called repeatedly at a fixed rate. Contrary to
 the C library, the method here doesn't check the timing and just computes a
@@ -34,8 +39,8 @@ obtained time step between individual 'computes'.
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
-__date__ = "03-12-2021"
-__version__ = "2.0.1"
+__date__ = "04-12-2021"
+__version__ = "2.0.2"
 
 import time
 import numpy as np
@@ -85,6 +90,14 @@ class PID_Controller:
     def compute(self, current_input, differential_input=np.nan):
         """Compute new PID output. This function should be called repeatedly,
         preferably at a fixed time interval.
+
+        Optional argument `differential_input` can be used to have the PID
+        controller regulate a specific difference with respect to the main
+        argument `current_input`. The specific difference that will be regulated
+        is set by `setpoint`.
+        Use-case example: Regulating the difference between input- and output
+        water temperatures to be about 2 degC.
+
         Returns True when the output is computed, false when nothing has been
         done.
         """
@@ -96,10 +109,9 @@ class PID_Controller:
             self.last_time = now
             return False
 
-
         _input = current_input
 
-        if differential_input != np.nan:
+        if not np.isnan(differential_input):
             _input = differential_input - current_input
         self.last_error = self.setpoint - _input
 
@@ -107,8 +119,9 @@ class PID_Controller:
         self.pTerm = self.controller_direction * self.kp * self.last_error
 
         # Integral term
-        # self.iTerm = self.iTerm + (self.ki * self.last_error)
-        self.iTerm = self.iTerm + (self.controller_direction * self.ki * time_step * self.last_error)
+        self.iTerm = self.iTerm + (
+            self.controller_direction * self.ki * time_step * self.last_error
+        )
 
         if self.debug:
             if self.iTerm < self.output_limit_min:
@@ -123,8 +136,11 @@ class PID_Controller:
 
         # Derivative term
         # Prevent derivative kick: really good to do!
-        # self.dTerm = -self.kd * (_input - self.last_input)
-        self.dTerm = -(self.controller_direction * self.kd) / time_step * (_input - self.last_input)
+        self.dTerm = (
+            -(self.controller_direction * self.kd)
+            / time_step
+            * (_input - self.last_input)
+        )
 
         # Compute PID Output
         self.output = self.pTerm + self.iTerm + self.dTerm
@@ -181,7 +197,9 @@ class PID_Controller:
             self.output = np.clip(self.output, limit_min, limit_max)
             self.iTerm = np.clip(self.iTerm, limit_min, limit_max)
 
-    def set_mode(self, mode, current_input, current_output,  differential_input = np.nan):
+    def set_mode(
+        self, mode, current_input, current_output, differential_input=np.nan
+    ):
         """Allows the controller Mode to be set to manual (0) or Automatic
         (non-zero). When the transition from manual to auto occurs, the
         controller is automatically initialized.
@@ -194,12 +212,14 @@ class PID_Controller:
 
         self.in_auto = new_auto
 
-    def initialize(self, current_input, current_output, differential_input = np.nan):
+    def initialize(
+        self, current_input, current_output, differential_input=np.nan
+    ):
         """Does all the things that need to happen to ensure a bumpless
         transfer from manual to automatic mode.
         """
         self.iTerm = current_output
-        if differential_input == np.nan:
+        if np.isnan(differential_input):
             self.last_input = current_input
         else:
             self.last_input = differential_input - current_input
