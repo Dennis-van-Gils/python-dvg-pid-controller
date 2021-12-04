@@ -46,8 +46,8 @@ class Constants:
     MANUAL = 0
     AUTOMATIC = 1
 
-    DIRECT = 0
-    REVERSE = 1
+    DIRECT = 1
+    REVERSE = -1
 
 
 class PID_Controller:
@@ -82,7 +82,7 @@ class PID_Controller:
         self.last_input = np.nan
         self.last_error = np.nan
 
-    def compute(self, current_input):
+    def compute(self, current_input, differential_input=np.nan):
         """Compute new PID output. This function should be called repeatedly,
         preferably at a fixed time interval.
         Returns True when the output is computed, false when nothing has been
@@ -96,15 +96,19 @@ class PID_Controller:
             self.last_time = now
             return False
 
+
         _input = current_input
+
+        if differential_input != np.nan:
+            _input = differential_input - current_input
         self.last_error = self.setpoint - _input
 
         # Proportional term
-        self.pTerm = self.kp * self.last_error
+        self.pTerm = self.controller_direction * self.kp * self.last_error
 
         # Integral term
         # self.iTerm = self.iTerm + (self.ki * self.last_error)
-        self.iTerm = self.iTerm + (self.ki * time_step * self.last_error)
+        self.iTerm = self.iTerm + (self.controller_direction * self.ki * time_step * self.last_error)
 
         if self.debug:
             if self.iTerm < self.output_limit_min:
@@ -120,7 +124,7 @@ class PID_Controller:
         # Derivative term
         # Prevent derivative kick: really good to do!
         # self.dTerm = -self.kd * (_input - self.last_input)
-        self.dTerm = -self.kd / time_step * (_input - self.last_input)
+        self.dTerm = -(self.controller_direction * self.kd) / time_step * (_input - self.last_input)
 
         # Compute PID Output
         self.output = self.pTerm + self.iTerm + self.dTerm
@@ -161,16 +165,10 @@ class PID_Controller:
         if (Kp < 0) or (Ki < 0) or (Kd < 0):
             return
 
+        self.kp = Kp
+        self.ki = Ki
+        self.kd = Kd
         self.controller_direction = direction
-
-        if self.controller_direction == Constants.REVERSE:
-            self.kp = -Kp
-            self.ki = -Ki
-            self.kd = -Kd
-        else:
-            self.kp = Kp
-            self.ki = Ki
-            self.kd = Kd
 
     def set_output_limits(self, limit_min, limit_max):
         if limit_min >= limit_max:
@@ -183,7 +181,7 @@ class PID_Controller:
             self.output = np.clip(self.output, limit_min, limit_max)
             self.iTerm = np.clip(self.iTerm, limit_min, limit_max)
 
-    def set_mode(self, mode, current_input, current_output):
+    def set_mode(self, mode, current_input, current_output,  differential_input = np.nan):
         """Allows the controller Mode to be set to manual (0) or Automatic
         (non-zero). When the transition from manual to auto occurs, the
         controller is automatically initialized.
@@ -192,16 +190,19 @@ class PID_Controller:
         new_auto = mode == Constants.AUTOMATIC
         if new_auto and not self.in_auto:
             # We just went from manual to auto
-            self.initialize(current_input, current_output)
+            self.initialize(current_input, current_output, differential_input)
 
         self.in_auto = new_auto
 
-    def initialize(self, current_input, current_output):
+    def initialize(self, current_input, current_output, differential_input = np.nan):
         """Does all the things that need to happen to ensure a bumpless
         transfer from manual to automatic mode.
         """
         self.iTerm = current_output
-        self.last_input = current_input
+        if differential_input == np.nan:
+            self.last_input = current_input
+        else:
+            self.last_input = differential_input - current_input
 
         if self.debug:
             dprint("PID init")
