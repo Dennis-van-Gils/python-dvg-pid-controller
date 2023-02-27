@@ -1,6 +1,10 @@
 Changelog
 =========
 
+2.1.1 (2023-02-27)
+------------------
+* Deprecated `requires.io`
+
 2.1.0 (2021-12-04)
 ------------------
 * Made the last error accessible

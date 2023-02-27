@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 
 setup(
     name="dvg-pid-controller",
-    version="2.1.0",
+    version="2.1.1",
     license="MIT",
     description="PID controller with integral-windup & derivative-kick prevention and bumpless manual-to-auto-mode transfer.",
     long_description="%s\n%s"

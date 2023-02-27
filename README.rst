@@ -12,6 +12,9 @@ DvG_PID_Controller
 *PID controller with integral-windup & derivative-kick prevention and bumpless
 manual-to-auto-mode transfer.*
 
+- Github: https://github.com/Dennis-van-Gils/python-dvg-pid-controller
+- PyPI: https://pypi.org/project/dvg-pid-controller
+
 Installation::
 
     pip install dvg-pid-controller
