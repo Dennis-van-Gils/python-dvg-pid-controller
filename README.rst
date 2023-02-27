@@ -2,9 +2,6 @@
     :target: https://pypi.org/project/dvg-pid-controller
 .. image:: https://img.shields.io/pypi/pyversions/dvg-pid-controller
     :target: https://pypi.org/project/dvg-pid-controller
-.. image:: https://requires.io/github/Dennis-van-Gils/python-dvg-pid-controller/requirements.svg?branch=master
-     :target: https://requires.io/github/Dennis-van-Gils/python-dvg-pid-controller/requirements/?branch=master
-     :alt: Requirements Status
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 .. image:: https://img.shields.io/badge/License-MIT-purple.svg
