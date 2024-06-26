@@ -7,6 +7,14 @@
 .. image:: https://img.shields.io/badge/License-MIT-purple.svg
     :target: https://github.com/Dennis-van-Gils/python-dvg-pid-controller/blob/master/LICENSE.txt
 
+ABANDONED PROJECT
+=================
+
+While there is nothing technically wrong with this library, the implementation found
+at https://github.com/m-lundberg/simple-pid is more elegant. It follows the same
+methodology as Brett Beauregard's original.
+
+
 DvG_PID_Controller
 ==================
 *PID controller with integral-windup & derivative-kick prevention and bumpless
