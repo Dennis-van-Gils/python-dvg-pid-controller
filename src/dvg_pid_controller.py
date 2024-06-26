@@ -39,36 +39,145 @@ obtained time step between individual 'computes'.
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
-__date__ = "04-12-2021"
-__version__ = "2.1.0"
+__date__ = "26-06-2024"
+__version__ = "2.2.0"
+
+from typing import Union
+from enum import IntEnum
 
 import time
 import numpy as np
 from dvg_debug_functions import dprint
 
 
-class Constants:
-    MANUAL = 0
-    AUTOMATIC = 1
+class Direction(IntEnum):
+    """Controller direction enumeration."""
 
     DIRECT = 1
+    """Increasing output (+) leads to increasing input (+)."""
+
     REVERSE = -1
+    """Increasing output (+) leads to decreasing input (-)."""
+
+
+class Mode(IntEnum):
+    """Controller mode enumeration."""
+
+    MANUAL = 0
+    """PID control is disabled."""
+
+    AUTOMATIC = 1
+    """PID control is enabled."""
+
+
+class Constants:
+    """Legacy code for backwards compatibility. Use enums `Direction` and `Mode`
+    instead."""
+
+    # fmt: off
+    MANUAL    = 0   # Now `Mode.MANUAL`
+    AUTOMATIC = 1   # Now `Mode.AUTOMATIC`
+    DIRECT    = 1   # Now `Direction.DIRECT`
+    REVERSE   = -1  # Now `Direction.REVERSE`
+    # fmt: on
 
 
 class PID_Controller:
+    """Manages a PID controller with integral-windup & derivative-kick
+    prevention and bumpless manual-to-auto-mode transfer.
+
+    The `compute()` method should be called repeatedly, preferably at a fixed
+    rate, to compute a new PID output whenever it gets called. The newly
+    calculated PID output is available in attribute `output`. The Ki and Kd
+    parameters are time dependent by definition and `compute()` will internally
+    adjust the integral and derivative terms based on the actually obtained time
+    step between individual 'computes'.
+
+    The PID controller starts in manual mode, i.e. not enabled. You must call
+    `set_mode(mode=Mode.Automatic, ...)` to start automatic PID control.
+
+    Args:
+        Kp (``float``):
+            Proportional gain. Must be >= 0 in dimensionless units.
+
+        Ki (``float``):
+            Integral gain. Must be >= 0 in units of [sec^-1].
+
+        Kd (``float``):
+            Derivative gain. Must be >= 0 in units of [sec].
+
+        direction (``int`` | ``Direction``, optional):
+            Specify whether increasing output (+) leads to increasing input (+),
+            aka 'direct', or the reverse.
+
+            Default: ``Direction.Direct``
+
+        debug (``bool``, optional):
+            Print debug information to the terminal?
+
+            Default: False
+
+    Attributes:
+        Kp (``float``, property):
+            Set proportional gain in dimensionless units.
+
+        Ki (``float``):
+            Set integral gain in units of [sec^-1].
+
+        Kd (``float``):
+            Set derivative gain in units of [sec].
+
+        output_limit_min (``float``):
+            Minimum value to which the output and integral term will be clamped
+            when running in `Automatic` mode. Part of the integral windup
+            prevention.
+
+        output_limit_max (``float``):
+            Maximum value to which the output and integral term will be clamped
+            when running in `Automatic` mode. Part of the integral windup
+            prevention.
+
+        in_auto (``bool``):
+            Is the PID controller in Automatic mode, i.e. enabled?
+
+        _output_P (``float``):
+            Computed proportional term since the last call to `update()`.
+
+        _output_I (``float``):
+            Computed integral term since the last call to `update()`, adjusted
+            for the actually obtained time step in between update calls and
+            subsequently clamped to the set output limits.
+
+        _output_D (``float``):
+            Computed derivative term since the last call to `update()`, adjusted
+            for the actually obtained time step in between update calls.
+
+        output (``float``):
+            Computed PID output since the last call to `update()`. It is the
+            summation of the ``_output_P``, ``_output_I`` and ``_output_D`` terms,
+            subsequently clamped to the set output limits.
+    """
+
     def __init__(
-        self, Kp, Ki, Kd, controller_direction=Constants.DIRECT, debug=False
+        self,
+        Kp: float,
+        Ki: float,
+        Kd: float,
+        direction: Union[int, Direction] = Direction.DIRECT,
+        debug: bool = False,
     ):
-        self.setpoint = np.nan
-        self.output = np.nan
+        self._setpoint = np.nan
 
-        # Must be set by set_tunings()
-        self.kp = np.nan
-        self.ki = np.nan
-        self.kd = np.nan
+        self._Kp = np.nan
+        self._Ki = np.nan
+        self._Kd = np.nan
 
-        # Show debug info in terminal?
+        self._output_P = np.nan
+        self._output_I = np.nan
+        self._output_D = np.nan
+
         self.debug = debug
+        """Print debug information to the terminal?"""
 
         # Must be set by set_output_limits()
         self.output_limit_min = np.nan
@@ -76,18 +185,96 @@ class PID_Controller:
 
         self.in_auto = False
 
-        self.pTerm = 0
-        self.iTerm = 0
-        self.dTerm = 0
+        self.output = np.nan
+        """Computed PID output since the last call to `update()`. It is the
+        summation of the ``_output_P``, ``_output_I`` and ``_output_D`` terms, subsequently
+        clamped to the set output limits."""
 
-        self.set_tunings(Kp, Ki, Kd, controller_direction)
+        self.set_tunings(Kp, Ki, Kd, direction)
         self.set_output_limits(0, 100)
 
         self.last_time = time.perf_counter()
         self.last_input = np.nan
         self.last_error = np.nan
 
-    def compute(self, current_input, differential_input=np.nan):
+    # --------------------------------------------------------------------------
+    #   Properties
+    # --------------------------------------------------------------------------
+
+    def _throw_error_on_negative_value(self, value: float):
+        if value < 0:
+            raise ValueError(
+                "Negative values not allowed. Set `direction = -1` instead."
+            )
+
+    @property
+    def setpoint(self):
+        """The setpoint to aim for."""
+        return self._setpoint
+
+    @setpoint.setter
+    def setpoint(self, value: float):
+        self._setpoint = value
+
+    @property
+    def Kp(self):
+        """The proportional gain in dimensionless units. Must be >= 0."""
+        return self._Kp
+
+    @Kp.setter
+    def Kp(self, value: float):
+        self._throw_error_on_negative_value(value)
+        self._Kp = value
+
+    @property
+    def Ki(self):
+        """The integral gain in units of [sec^-1]. Must be >= 0."""
+        return self._Ki
+
+    @Ki.setter
+    def Ki(self, value: float):
+        self._throw_error_on_negative_value(value)
+        self._Ki = value
+
+    @property
+    def Kd(self):
+        """The derivative gain in units of [sec]. Must be >= 0."""
+        return self._Kd
+
+    @Kd.setter
+    def Kd(self, value: float):
+        self._throw_error_on_negative_value(value)
+        self._Kd = value
+
+    @property
+    def output_P(self):
+        """Computed proportional term since the last call to `update()`."""
+        return self._output_P
+
+    @property
+    def output_I(self):
+        """Computed integral term since the last call to `update()`, adjusted
+        for the actually obtained time step in between update calls and
+        subsequently clamped to the set output limits.
+        """
+        return self._output_I
+
+    @property
+    def output_D(self):
+        """Computed derivative term since the last call to `update()`, adjusted
+        for the actually obtained time step in between update calls.
+        """
+        return self._output_D
+
+    # --------------------------------------------------------------------------
+    #   Methods
+    # --------------------------------------------------------------------------
+
+    def compute(
+        self,
+        current_input: float,
+        differential_input: float = np.nan,
+    ) -> bool:
         """Compute new PID output. This function should be called repeatedly,
         preferably at a fixed time interval.
 
@@ -105,7 +292,7 @@ class PID_Controller:
         now = time.perf_counter()  # [s]
         time_step = now - self.last_time
 
-        if (not self.in_auto) or np.isnan(self.setpoint):
+        if (not self.in_auto) or np.isnan(self._setpoint):
             self.last_time = now
             return False
 
@@ -113,42 +300,44 @@ class PID_Controller:
 
         if not np.isnan(differential_input):
             _input = differential_input - current_input
-        self.last_error = self.setpoint - _input
+        self.last_error = self._setpoint - _input
 
         # Proportional term
-        self.pTerm = self.controller_direction * self.kp * self.last_error
+        self._output_P = self.direction * self._Kp * self.last_error
 
         # Integral term
-        self.iTerm = self.iTerm + (
-            self.controller_direction * self.ki * time_step * self.last_error
+        self._output_I = self._output_I + (
+            self.direction * self._Ki * time_step * self.last_error
         )
 
         if self.debug:
-            if self.iTerm < self.output_limit_min:
-                dprint("iTerm < output_limit_min: integral windup")
-            elif self.iTerm > self.output_limit_max:
-                dprint("iTerm > output_limit_max: integral windup")
+            if self._output_I < self.output_limit_min:
+                dprint("_output_I < output_limit_min: integral windup")
+            elif self._output_I > self.output_limit_max:
+                dprint("_output_I > output_limit_max: integral windup")
 
         # Prevent integral windup
-        self.iTerm = np.clip(
-            self.iTerm, self.output_limit_min, self.output_limit_max
+        self._output_I = np.clip(
+            self._output_I, self.output_limit_min, self.output_limit_max
         )
 
         # Derivative term
         # Prevent derivative kick: really good to do!
-        self.dTerm = (
-            -(self.controller_direction * self.kd)
+        self._output_D = (
+            -(self.direction * self._Kd)
             / time_step
             * (_input - self.last_input)
         )
 
         # Compute PID Output
-        self.output = self.pTerm + self.iTerm + self.dTerm
+        self.output = self._output_P + self._output_I + self._output_D
 
         if self.debug:
-            dprint("%i" % (time_step * 1000))
-            dprint("%.1f %.1f %.1f" % (self.pTerm, self.iTerm, self.dTerm))
-            dprint((" " * 14 + "%.2f") % self.output)
+            dprint(f"{time_step * 1000}")
+            dprint(
+                f"{self._output_P:.1f} {self._output_I:.1f} {self._output_D:.1f}"
+            )
+            dprint((" " * 14 + f"{self.output:.2f}"))
 
             if self.output < self.output_limit_min:
                 dprint("output < output_limit_min: output clamped")
@@ -166,7 +355,13 @@ class PID_Controller:
 
         return True
 
-    def set_tunings(self, Kp, Ki, Kd, direction=Constants.DIRECT):
+    def set_tunings(
+        self,
+        Kp: float,
+        Ki: float,
+        Kd: float,
+        direction: Union[int, Direction] = Direction.DIRECT,
+    ):
         """This function allows the controller's dynamic performance to be
         adjusted. It's called automatically from the constructor, but tunings
         can also be adjusted on the fly during normal operation.
@@ -181,12 +376,16 @@ class PID_Controller:
         if (Kp < 0) or (Ki < 0) or (Kd < 0):
             return
 
-        self.kp = Kp
-        self.ki = Ki
-        self.kd = Kd
-        self.controller_direction = direction
+        self._Kp = Kp
+        self._Ki = Ki
+        self._Kd = Kd
+        self.direction = direction
 
-    def set_output_limits(self, limit_min, limit_max):
+    def set_output_limits(
+        self,
+        limit_min: float,
+        limit_max: float,
+    ):
         if limit_min >= limit_max:
             return
 
@@ -195,17 +394,21 @@ class PID_Controller:
 
         if self.in_auto:
             self.output = np.clip(self.output, limit_min, limit_max)
-            self.iTerm = np.clip(self.iTerm, limit_min, limit_max)
+            self._output_I = np.clip(self._output_I, limit_min, limit_max)
 
     def set_mode(
-        self, mode, current_input, current_output, differential_input=np.nan
+        self,
+        mode: Union[int, Mode],
+        current_input: float,
+        current_output: float,
+        differential_input: float = np.nan,
     ):
         """Allows the controller Mode to be set to manual (0) or Automatic
         (non-zero). When the transition from manual to auto occurs, the
         controller is automatically initialized.
         """
 
-        new_auto = mode == Constants.AUTOMATIC
+        new_auto = mode == Mode.AUTOMATIC
         if new_auto and not self.in_auto:
             # We just went from manual to auto
             self.initialize(current_input, current_output, differential_input)
@@ -213,12 +416,15 @@ class PID_Controller:
         self.in_auto = new_auto
 
     def initialize(
-        self, current_input, current_output, differential_input=np.nan
+        self,
+        current_input: float,
+        current_output: float,
+        differential_input=np.nan,
     ):
         """Does all the things that need to happen to ensure a bumpless
         transfer from manual to automatic mode.
         """
-        self.iTerm = current_output
+        self._output_I = current_output
         if np.isnan(differential_input):
             self.last_input = current_input
         else:
@@ -226,11 +432,15 @@ class PID_Controller:
 
         if self.debug:
             dprint("PID init")
-            if self.iTerm < self.output_limit_min:
-                dprint("@PID init: iTerm < output_limit_min: integral windup")
-            elif self.iTerm > self.output_limit_max:
-                dprint("@PID init: iTerm > output_limit_max: integral windup")
+            if self._output_I < self.output_limit_min:
+                dprint(
+                    "@PID init: _output_I < output_limit_min: integral windup"
+                )
+            elif self._output_I > self.output_limit_max:
+                dprint(
+                    "@PID init: _output_I > output_limit_max: integral windup"
+                )
 
-        self.iTerm = np.clip(
-            self.iTerm, self.output_limit_min, self.output_limit_max
+        self._output_I = np.clip(
+            self._output_I, self.output_limit_min, self.output_limit_max
         )

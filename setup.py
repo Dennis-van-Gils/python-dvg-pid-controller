@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 
 setup(
     name="dvg-pid-controller",
-    version="2.1.1",
+    version="2.2.0",
     license="MIT",
     description="PID controller with integral-windup & derivative-kick prevention and bumpless manual-to-auto-mode transfer.",
     long_description="%s\n%s"
@@ -52,11 +52,6 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering ",
         "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
         "Topic :: Scientific/Engineering :: Physics",
@@ -74,7 +69,7 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "numpy~=1.15",
+        "numpy>=1.15,<3.0",
         "dvg-debug-functions~=2.1",
     ],
     extras_require={},

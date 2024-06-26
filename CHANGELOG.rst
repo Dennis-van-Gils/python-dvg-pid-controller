@@ -1,6 +1,23 @@
 Changelog
 =========
 
+3.0.0 (2024-06-26)
+------------------
+* Support for Numpy 2.0
+* Using f-strings
+* Added type hints
+* Added IntEnums `Direction` and `Mode`
+* Extended docstrings
+* Improved code quality
+
+Breaking code
+* `PID_Controller()` arguments changed names:
+  * `controller_direction` --> `direction`
+* `PID_Controller()` attributes changed names:
+  * `kp`, `ki`, `kd` --> `Kp`, `Ki`, `Kd`
+  * `controller_direction` --> `direction`
+  * `pTerm`, `iTerm`, `pTerm` --> `_output_P`, `_output_I`, `_output_D`
+
 2.1.1 (2023-02-27)
 ------------------
 * Deprecated `requires.io`
