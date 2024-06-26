@@ -39,8 +39,8 @@ obtained time step between individual 'computes'.
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pid-controller"
-__date__ = "04-12-2021"
-__version__ = "2.1.0"
+__date__ = "26-06-2024"
+__version__ = "2.2.0"
 
 import time
 import numpy as np
