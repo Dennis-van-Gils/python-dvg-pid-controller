@@ -1,9 +1,8 @@
 Changelog
 =========
 
-3.0.0 (2024-06-26)
-------------------
-* Support for Numpy 2.0
+Abandoned and never released (2024-06-26)
+-----------------------------------------
 * Using f-strings
 * Added type hints
 * Added IntEnums `Direction` and `Mode`
@@ -17,6 +16,12 @@ Breaking code
   * `kp`, `ki`, `kd` --> `Kp`, `Ki`, `Kd`
   * `controller_direction` --> `direction`
   * `pTerm`, `iTerm`, `pTerm` --> `_output_P`, `_output_I`, `_output_D`
+
+2.2.0 (2024-06-26)
+------------------
+* Support for Numpy 2.0 without any change needed
+* That being done, this library is now abandoned. The implementation found at
+  https://github.com/m-lundberg/simple-pid is more elegant.
 
 2.1.1 (2023-02-27)
 ------------------
